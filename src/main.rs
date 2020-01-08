@@ -13,11 +13,16 @@ use std::time::Duration;
 const SCALE: u32 = 12;
 const SIZE: u32 = 42;
 
-#[derive(Debug)]
+#[derive(PartialEq, Eq)]
 struct Point {
     x: i32,
     y: i32,
 }
+
+const MOVE_UP: Point = Point { x: 0, y: -1 };
+const MOVE_RIGHT: Point = Point { x: 1, y: 0 };
+const MOVE_DOWN: Point = Point { x: 0, y: 1 };
+const MOVE_LEFT: Point = Point { x: -1, y: 0 };
 
 impl Point {
     fn new() -> Point {
@@ -80,6 +85,13 @@ impl Snake {
             x: self.body[0].x,
             y: self.body[0].y,
         });
+    }
+
+    fn moveup(&mut self) {
+        match self.vel {
+            MOVE_DOWN if self.body.len() > 1 => {}
+            _ => self.vel = MOVE_UP,
+        }
     }
 }
 
