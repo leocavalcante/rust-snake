@@ -30,7 +30,7 @@ impl Point {
     }
 
     fn overlap(&self, vec: &Point) -> bool {
-        self.x == vec.x && self.y == vec.y
+        self.x == vec.x && self.y == vec.y && !::std::ptr::eq(self, vec)
     }
 
     fn rand() -> Point {
@@ -80,7 +80,22 @@ impl Snake {
         self.body[0].overlap(&food.pos)
     }
 
-    fn levelup(&mut self) {
+    fn hits_it_self(&self) -> bool {
+        for p in &self.body {
+            if self.body[0].overlap(&p) {
+                return true;
+            }
+        }
+
+        false
+    }
+
+    fn reset(&mut self) {
+        self.body = vec![Point::new()];
+        self.vel = Point::new();
+    }
+
+    fn level_up(&mut self) {
         self.body.push(Point {
             x: self.body[0].x,
             y: self.body[0].y,
@@ -186,12 +201,17 @@ fn main() -> Result<(), String> {
         canvas.set_draw_color(Color::RGB(0, 0, 0));
         canvas.clear();
 
+        if snake.eats(&food) {
+            food.replace();
+            snake.level_up();
+        }
+
         food.update(&mut canvas);
         snake.update(&mut canvas);
 
-        if snake.eats(&food) {
+        if snake.hits_it_self() {
             food.replace();
-            snake.levelup();
+            snake.reset();
         }
 
         canvas.present();
