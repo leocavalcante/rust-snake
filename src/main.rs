@@ -47,8 +47,8 @@ struct Snake {
 impl Snake {
     fn new() -> Snake {
         Snake {
-            color: Color::RGB(255, 255, 255),
-            vel: Point { x: 0, y: 1 },
+            color: Color::RGB(0, 255, 0),
+            vel: Point { x: 0, y: 0 },
             body: vec![Point::new()],
         }
     }
@@ -91,7 +91,7 @@ struct Food {
 impl Food {
     fn new() -> Food {
         Food {
-            color: Color::RGB(255, 255, 255),
+            color: Color::RGB(255, 0, 0),
             pos: Point::rand(),
         }
     }
