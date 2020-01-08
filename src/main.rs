@@ -10,23 +10,28 @@ use sdl2::render::WindowCanvas;
 use std::thread::sleep;
 use std::time::Duration;
 
-const SCALE: u32 = 10;
-const SIZE: u32 = 40;
+const SCALE: u32 = 12;
+const SIZE: u32 = 42;
 
-struct Vec {
+#[derive(Debug)]
+struct Point {
     x: i32,
     y: i32,
 }
 
-impl Vec {
-    fn overlap(&self, vec: &Vec) -> bool {
+impl Point {
+    fn new() -> Point {
+        Point { x: 0, y: 0 }
+    }
+
+    fn overlap(&self, vec: &Point) -> bool {
         self.x == vec.x && self.y == vec.y
     }
 
-    fn rand() -> Vec {
+    fn rand() -> Point {
         let mut rng = rand::thread_rng();
 
-        Vec {
+        Point {
             x: (rng.gen_range(0, SIZE - SCALE) * SCALE) as i32,
             y: (rng.gen_range(0, SIZE - SCALE) * SCALE) as i32,
         }
@@ -35,38 +40,59 @@ impl Vec {
 
 struct Snake {
     color: Color,
-    pos: Vec,
-    vel: Vec,
+    body: Vec<Point>,
+    vel: Point,
 }
 
 impl Snake {
-    fn update(&mut self, canvas: &mut WindowCanvas) {
-        self.pos.x += self.vel.x * SCALE as i32;
-        self.pos.y += self.vel.y * SCALE as i32;
+    fn new() -> Snake {
+        Snake {
+            color: Color::RGB(255, 255, 255),
+            vel: Point { x: 0, y: 1 },
+            body: vec![Point::new()],
+        }
+    }
 
-        canvas.set_draw_color(self.color);
-        canvas.fill_rect(Rect::new(self.pos.x, self.pos.y, SCALE, SCALE));
+    fn update(&mut self, canvas: &mut WindowCanvas) {
+        for i in (0..self.body.len()).rev() {
+            match i {
+                0 => {
+                    self.body[i].x += self.vel.x * SCALE as i32;
+                    self.body[i].y += self.vel.y * SCALE as i32;
+                }
+                _ => {
+                    self.body[i].x = self.body[i - 1].x;
+                    self.body[i].y = self.body[i - 1].y;
+                }
+            }
+
+            canvas.set_draw_color(self.color);
+            canvas.fill_rect(Rect::new(self.body[i].x, self.body[i].y, SCALE, SCALE));
+        }
     }
 
     fn eats(&self, food: &Food) -> bool {
-        self.pos.overlap(&food.pos)
+        self.body[0].overlap(&food.pos)
     }
 
-    fn levelup(&self) {
-        println!("Level up");
+    fn levelup(&mut self) {
+        self.body.push(Point {
+            x: self.body[0].x,
+            y: self.body[0].y,
+        });
     }
 }
 
 struct Food {
     color: Color,
-    pos: Vec,
+    pos: Point,
 }
 
 impl Food {
     fn new() -> Food {
         Food {
-            color: Color::RGB(255, 255, 0),
-            pos: Vec::rand(),
+            color: Color::RGB(255, 255, 255),
+            pos: Point::rand(),
         }
     }
 
@@ -76,7 +102,7 @@ impl Food {
     }
 
     fn replace(&mut self) {
-        self.pos = Vec::rand();
+        self.pos = Point::rand();
     }
 }
 
@@ -93,13 +119,8 @@ fn main() -> Result<(), String> {
     let mut canvas = window.into_canvas().build().unwrap();
     let mut event_pump = context.event_pump().unwrap();
 
-    let mut snake = Snake {
-        color: Color::RGB(255, 0, 0),
-        pos: Vec { x: 0, y: 0 },
-        vel: Vec { x: 0, y: 1 },
-    };
-
     let mut food = Food::new();
+    let mut snake = Snake::new();
 
     'running: loop {
         for event in event_pump.poll_iter() {
@@ -112,19 +133,19 @@ fn main() -> Result<(), String> {
                 Event::KeyDown {
                     keycode: Some(Keycode::Up),
                     ..
-                } => snake.vel = Vec { x: 0, y: -1 },
+                } => snake.vel = Point { x: 0, y: -1 },
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
                     ..
-                } => snake.vel = Vec { x: 1, y: 0 },
+                } => snake.vel = Point { x: 1, y: 0 },
                 Event::KeyDown {
                     keycode: Some(Keycode::Down),
                     ..
-                } => snake.vel = Vec { x: 0, y: 1 },
+                } => snake.vel = Point { x: 0, y: 1 },
                 Event::KeyDown {
                     keycode: Some(Keycode::Left),
                     ..
-                } => snake.vel = Vec { x: -1, y: 0 },
+                } => snake.vel = Point { x: -1, y: 0 },
                 _ => {}
             }
         }
