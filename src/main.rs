@@ -87,10 +87,31 @@ impl Snake {
         });
     }
 
-    fn moveup(&mut self) {
+    fn move_up(&mut self) {
         match self.vel {
             MOVE_DOWN if self.body.len() > 1 => {}
             _ => self.vel = MOVE_UP,
+        }
+    }
+
+    fn move_right(&mut self) {
+        match self.vel {
+            MOVE_LEFT if self.body.len() > 1 => {}
+            _ => self.vel = MOVE_RIGHT,
+        }
+    }
+
+    fn move_down(&mut self) {
+        match self.vel {
+            MOVE_UP if self.body.len() > 1 => {}
+            _ => self.vel = MOVE_DOWN,
+        }
+    }
+
+    fn move_left(&mut self) {
+        match self.vel {
+            MOVE_RIGHT if self.body.len() > 1 => {}
+            _ => self.vel = MOVE_LEFT,
         }
     }
 }
@@ -145,19 +166,19 @@ fn main() -> Result<(), String> {
                 Event::KeyDown {
                     keycode: Some(Keycode::Up),
                     ..
-                } => snake.vel = Point { x: 0, y: -1 },
+                } => snake.move_up(),
                 Event::KeyDown {
                     keycode: Some(Keycode::Right),
                     ..
-                } => snake.vel = Point { x: 1, y: 0 },
+                } => snake.move_right(),
                 Event::KeyDown {
                     keycode: Some(Keycode::Down),
                     ..
-                } => snake.vel = Point { x: 0, y: 1 },
+                } => snake.move_down(),
                 Event::KeyDown {
                     keycode: Some(Keycode::Left),
                     ..
-                } => snake.vel = Point { x: -1, y: 0 },
+                } => snake.move_left(),
                 _ => {}
             }
         }
