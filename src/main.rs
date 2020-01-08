@@ -77,17 +77,24 @@ impl Snake {
     }
 
     fn eats(&self, food: &Food) -> bool {
-        self.body[0].overlap(&food.pos)
+        self.head().overlap(&food.pos)
     }
 
     fn hits_it_self(&self) -> bool {
         for p in &self.body {
-            if self.body[0].overlap(&p) {
+            if self.head().overlap(&p) {
                 return true;
             }
         }
 
         false
+    }
+
+    fn of_bounds(&self) -> bool {
+        self.head().x < 0
+            || self.head().y < 0
+            || self.head().x > (SIZE * SCALE) as i32
+            || self.head().y > (SIZE * SCALE) as i32
     }
 
     fn reset(&mut self) {
@@ -97,8 +104,8 @@ impl Snake {
 
     fn level_up(&mut self) {
         self.body.push(Point {
-            x: self.body[0].x,
-            y: self.body[0].y,
+            x: self.head().x,
+            y: self.head().y,
         });
     }
 
@@ -128,6 +135,10 @@ impl Snake {
             MOVE_RIGHT if self.body.len() > 1 => {}
             _ => self.vel = MOVE_LEFT,
         }
+    }
+
+    fn head(&self) -> &Point {
+        &self.body[0]
     }
 }
 
@@ -210,6 +221,11 @@ fn main() -> Result<(), String> {
         snake.update(&mut canvas);
 
         if snake.hits_it_self() {
+            food.replace();
+            snake.reset();
+        }
+
+        if snake.of_bounds() {
             food.replace();
             snake.reset();
         }
