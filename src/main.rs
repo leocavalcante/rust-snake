@@ -10,6 +10,9 @@ use sdl2::render::WindowCanvas;
 use std::thread::sleep;
 use std::time::Duration;
 
+#[cfg(target_os = "emscripten")]
+pub mod emscripten;
+
 const SCALE: u32 = 12;
 const SIZE: u32 = 42;
 
@@ -171,6 +174,7 @@ fn main() -> Result<(), String> {
 
     let window = video
         .window("Snake", SIZE * SCALE, SIZE * SCALE)
+        .opengl()
         .position_centered()
         .build()
         .unwrap();
@@ -181,14 +185,16 @@ fn main() -> Result<(), String> {
     let mut food = Food::new();
     let mut snake = Snake::new();
 
-    'running: loop {
+    let mut main_loop = || {
         for event in event_pump.poll_iter() {
             match event {
                 Event::Quit { .. }
                 | Event::KeyDown {
                     keycode: Some(Keycode::Escape),
                     ..
-                } => break 'running,
+                } => {
+                    ::std::process::exit(1);
+                }
                 Event::KeyDown {
                     keycode: Some(Keycode::Up),
                     ..
@@ -232,20 +238,15 @@ fn main() -> Result<(), String> {
 
         canvas.present();
         sleep(Duration::new(0, 1_000_000_000u32 / SCALE));
+    };
+
+    #[cfg(target_os = "emscripten")]
+    emscripten::set_main_loop_callback(main_loop);
+
+    #[cfg(not(target_os = "emscripten"))]
+    loop {
+        main_loop();
     }
 
     Ok(())
-}
-
-pub fn set_main_loop_callback<F>(callback: F)
-where
-    F: FnMut(),
-{
-    MAIN_LOOP_CALLBACK.with(|log| {
-        *log.borrow_mut() = &callback as *const _ as *mut c_void;
-    });
-
-    unsafe {
-        emscripten_set_main_loop(wrapper::<F>, 0, 1);
-    }
 }

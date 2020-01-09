@@ -7,12 +7,21 @@
     <title>Snake</title>
   </head>
   <body>
-    <canvas id="canvas"></canvas>
+    <center>
+      <canvas id="canvas"></canvas>
+    </center>
+    <hr />
+    <div id="output"></div>
+    <hr />
     <script type="text/javascript">
       var Module = {
-        canvas: (function() {
-          return document.getElementById("canvas");
-        })()
+        print: (function() {
+          var element = document.getElementById("output");
+          return function(text) {
+            element.innerHTML += text.replace("\n", "<br>", "g") + "<br>";
+          };
+        })(),
+        canvas: document.getElementById("canvas")
       };
     </script>
     <script src="rust-snake.js"></script>
