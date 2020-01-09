@@ -236,3 +236,16 @@ fn main() -> Result<(), String> {
 
     Ok(())
 }
+
+pub fn set_main_loop_callback<F>(callback: F)
+where
+    F: FnMut(),
+{
+    MAIN_LOOP_CALLBACK.with(|log| {
+        *log.borrow_mut() = &callback as *const _ as *mut c_void;
+    });
+
+    unsafe {
+        emscripten_set_main_loop(wrapper::<F>, 0, 1);
+    }
+}

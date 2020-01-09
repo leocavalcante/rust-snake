@@ -5,9 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <title>Snake</title>
-    <script src="rust-snake.js"></script>
   </head>
   <body>
-    <p>Snake</p>
+    <canvas id="canvas"></canvas>
+    <script type="text/javascript">
+      var Module = {
+        canvas: (function() {
+          return document.getElementById("canvas");
+        })()
+      };
+    </script>
+    <script src="rust-snake.js"></script>
   </body>
 </html>
