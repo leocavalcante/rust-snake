@@ -1,17 +1,13 @@
+extern crate ggez;
 extern crate rand;
-extern crate sdl2;
 
+use std::time::{Duration, Instant};
+
+use ggez::graphics;
+use ggez::input::keyboard;
+use ggez::input::keyboard::KeyCode;
+use ggez::nalgebra as na;
 use rand::Rng;
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::pixels::Color;
-use sdl2::rect::Rect;
-use sdl2::render::WindowCanvas;
-use std::thread::sleep;
-use std::time::Duration;
-
-#[cfg(target_os = "emscripten")]
-pub mod emscripten;
 
 const SCALE: u32 = 12;
 const SIZE: u32 = 42;
@@ -47,7 +43,7 @@ impl Point {
 }
 
 struct Snake {
-    color: Color,
+    color: graphics::Color,
     body: Vec<Point>,
     vel: Point,
 }
@@ -55,13 +51,13 @@ struct Snake {
 impl Snake {
     fn new() -> Snake {
         Snake {
-            color: Color::RGB(0, 255, 0),
+            color: graphics::Color::from_rgb(0, 255, 0),
             vel: Point { x: 0, y: 0 },
             body: vec![Point::new()],
         }
     }
 
-    fn update(&mut self, canvas: &mut WindowCanvas) {
+    fn update(&mut self) {
         for i in (0..self.body.len()).rev() {
             match i {
                 0 => {
@@ -73,9 +69,19 @@ impl Snake {
                     self.body[i].y = self.body[i - 1].y;
                 }
             }
+        }
+    }
 
-            canvas.set_draw_color(self.color);
-            canvas.fill_rect(Rect::new(self.body[i].x, self.body[i].y, SCALE, SCALE));
+    fn draw(&mut self, ctx: &mut ggez::Context) {
+        for p in &self.body {
+            let sqr = graphics::Mesh::new_rectangle(
+                ctx,
+                graphics::DrawMode::fill(),
+                graphics::Rect::new(0.0, 0.0, SCALE as f32, SCALE as f32),
+                self.color,
+            ).unwrap();
+
+            graphics::draw(ctx, &sqr, (na::Point2::new(p.x as f32, p.y as f32), ));
         }
     }
 
@@ -146,21 +152,27 @@ impl Snake {
 }
 
 struct Food {
-    color: Color,
+    color: graphics::Color,
     pos: Point,
 }
 
 impl Food {
     fn new() -> Food {
         Food {
-            color: Color::RGB(255, 0, 0),
+            color: graphics::Color::from_rgb(255, 0, 0),
             pos: Point::rand(),
         }
     }
 
-    fn update(&mut self, canvas: &mut WindowCanvas) {
-        canvas.set_draw_color(self.color);
-        canvas.fill_rect(Rect::new(self.pos.x, self.pos.y, SCALE, SCALE));
+    fn draw(&mut self, ctx: &mut ggez::Context) {
+        let sqr = graphics::Mesh::new_rectangle(
+            ctx,
+            graphics::DrawMode::fill(),
+            graphics::Rect::new(0.0, 0.0, SCALE as f32, SCALE as f32),
+            self.color,
+        ).unwrap();
+
+        graphics::draw(ctx, &sqr, (na::Point2::new(self.pos.x as f32, self.pos.y as f32), ));
     }
 
     fn replace(&mut self) {
@@ -168,85 +180,85 @@ impl Food {
     }
 }
 
-fn main() -> Result<(), String> {
-    let context = sdl2::init().unwrap();
-    let video = context.video().unwrap();
+struct Game {
+    food: Food,
+    snake: Snake,
+    last_update: Instant,
+}
 
-    let window = video
-        .window("Snake", SIZE * SCALE, SIZE * SCALE)
-        .opengl()
-        .position_centered()
-        .build()
-        .unwrap();
+impl Game {
+    fn new() -> ggez::GameResult<Game> {
+        let g = Game {
+            food: Food::new(),
+            snake: Snake::new(),
+            last_update: Instant::now(),
+        };
 
-    let mut canvas = window.into_canvas().build().unwrap();
-    let mut event_pump = context.event_pump().unwrap();
+        Ok(g)
+    }
+}
 
-    let mut food = Food::new();
-    let mut snake = Snake::new();
-
-    let mut main_loop = || {
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::Quit { .. }
-                | Event::KeyDown {
-                    keycode: Some(Keycode::Escape),
-                    ..
-                } => {
-                    ::std::process::exit(1);
-                }
-                Event::KeyDown {
-                    keycode: Some(Keycode::Up),
-                    ..
-                } => snake.move_up(),
-                Event::KeyDown {
-                    keycode: Some(Keycode::Right),
-                    ..
-                } => snake.move_right(),
-                Event::KeyDown {
-                    keycode: Some(Keycode::Down),
-                    ..
-                } => snake.move_down(),
-                Event::KeyDown {
-                    keycode: Some(Keycode::Left),
-                    ..
-                } => snake.move_left(),
-                _ => {}
-            }
+impl ggez::event::EventHandler for Game {
+    fn update(&mut self, ctx: &mut ggez::Context) -> ggez::GameResult {
+        if !(Instant::now() - self.last_update >= Duration::from_millis((1.0 / (SCALE as f32) * 1000.0) as u64)) {
+            return Ok(());
         }
 
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
-
-        if snake.eats(&food) {
-            food.replace();
-            snake.level_up();
+        if keyboard::is_key_pressed(ctx, KeyCode::Right) {
+            self.snake.move_right();
         }
 
-        food.update(&mut canvas);
-        snake.update(&mut canvas);
-
-        if snake.hits_it_self() {
-            food.replace();
-            snake.reset();
+        if keyboard::is_key_pressed(ctx, KeyCode::Down) {
+            self.snake.move_down();
         }
 
-        if snake.of_bounds() {
-            food.replace();
-            snake.reset();
+        if keyboard::is_key_pressed(ctx, KeyCode::Left) {
+            self.snake.move_left();
         }
 
-        canvas.present();
-        sleep(Duration::new(0, 1_000_000_000u32 / SCALE));
-    };
+        if keyboard::is_key_pressed(ctx, KeyCode::Up) {
+            self.snake.move_up();
+        }
 
-    #[cfg(target_os = "emscripten")]
-    emscripten::set_main_loop_callback(main_loop);
+        if self.snake.eats(&self.food) {
+            self.food.replace();
+            self.snake.level_up();
+        }
 
-    #[cfg(not(target_os = "emscripten"))]
-    loop {
-        main_loop();
+        self.snake.update();
+
+        if self.snake.hits_it_self() {
+            self.food.replace();
+            self.snake.reset();
+        }
+
+        if self.snake.of_bounds() {
+            self.food.replace();
+            self.snake.reset();
+        }
+
+        self.last_update = Instant::now();
+        Ok(())
     }
 
-    Ok(())
+    fn draw(&mut self, ctx: &mut ggez::Context) -> ggez::GameResult {
+        graphics::clear(ctx, graphics::Color::from_rgb(0, 0, 0));
+
+        self.food.draw(ctx);
+        self.snake.draw(ctx);
+
+        graphics::present(ctx);
+        Ok(())
+    }
+}
+
+pub fn main() -> ggez::GameResult {
+    let cb = ggez::ContextBuilder::new("snake", "leocavalcante")
+        .window_setup(ggez::conf::WindowSetup::default().title("Snake"))
+        .window_mode(ggez::conf::WindowMode::default().dimensions((SIZE * SCALE) as f32, (SIZE * SCALE) as f32));
+
+    let (ctx, event_loop) = &mut cb.build()?;
+    let state = &mut Game::new()?;
+
+    ggez::event::run(ctx, event_loop, state)
 }

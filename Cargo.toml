@@ -6,4 +6,4 @@ edition = "2018"
 
 [dependencies]
 rand = "0.7.2"
-sdl2 = {git = "https://github.com/leocavalcante/rust-sdl2", branch = "no_lazy_static"}
+ggez = "0.5.1"
